@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cal Famiglia">
+<meta name="theme-color" content="#ffffff">
+<title>Calendario Famiglia</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:#222;font-size:15px}
+:root{--uc:#4dd9ac;--fam:#f59e0b;--slot:50px}
+
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e5e5e0;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+.logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:7px;color:#222}
+.logo-dot{width:12px;height:12px;border-radius:50%;background:var(--uc)}
+.nav-group{display:flex;align-items:center;gap:5px}
+.nav-btn{background:none;border:1px solid #ddd;border-radius:9px;padding:6px 14px;font-size:14px;cursor:pointer;color:#333;font-weight:500}
+.nav-btn:hover{background:#f0f0ec}
+.view-toggle{display:flex;border:1px solid #ddd;border-radius:9px;overflow:hidden;margin-left:auto}
+.vbtn{background:none;border:none;border-right:1px solid #ddd;padding:6px 14px;font-size:14px;cursor:pointer;color:#777;font-weight:500}
+.vbtn:last-child{border-right:none}
+.vbtn.active{background:#f0f0ec;color:#222;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.share-btn{background:none;border:1px solid #ddd;border-radius:9px;padding:6px 13px;font-size:14px;cursor:pointer;color:#333;font-weight:500}
+.share-btn:hover{background:#f0f0ec}
+.add-btn{background:var(--uc);border:none;border-radius:9px;padding:6px 16px;font-size:14px;cursor:pointer;color:#fff;font-weight:700}
+.add-btn:hover{opacity:.9}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.1)}
+.avatar:hover{opacity:.8}
+
+/* Sidebar */
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:195px;background:#fff;border-right:1px solid #e5e5e0;padding:12px;flex-shrink:0;overflow-y:auto}
+.sidebar-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:7px;font-weight:700}
+.mini-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.mini-nav-btn{background:none;border:none;cursor:pointer;color:#888;font-size:18px;padding:2px 5px;border-radius:4px}
+.mini-nav-btn:hover{background:#f0f0ec}
+.mini-month-label{font-size:13px;font-weight:700}
+.mini-cal{width:100%;border-collapse:collapse;font-size:12px}
+.mini-cal th{color:#aaa;font-weight:600;text-align:center;padding:3px 0}
+.mini-cal td{text-align:center;padding:2px 0;cursor:pointer;width:24px;height:24px;line-height:24px;border-radius:50%}
+.mini-cal td:hover{background:#f0f0ec}
+.mini-cal td.today{background:var(--uc);color:#fff;font-weight:700}
+.mini-cal td.other-month{color:#ccc}
+.mini-cal td.selected{outline:2px solid var(--uc);outline-offset:-1px;border-radius:50%}
+.members-section{margin-top:14px}
+.member-item{display:flex;align-items:center;gap:7px;padding:6px 3px;border-radius:7px;cursor:pointer;font-size:14px;user-select:none}
+.member-item:hover{background:#f5f5f0}
+.member-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.member-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-item.hidden .member-name{color:#bbb;text-decoration:line-through}
+.fam-legend{display:flex;align-items:center;gap:7px;padding:6px 3px;font-size:14px}
+
+/* Mobile: sidebar come pannello sovrapposto */
+@media(max-width:600px){
+  .sidebar{display:none;position:fixed;top:0;left:0;bottom:0;z-index:50;width:210px;box-shadow:4px 0 24px rgba(0,0,0,.2)}
+  .sidebar.open{display:block}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:49}
+  .sidebar-overlay.open{display:block}
+  .sidebar-toggle{display:flex!important}
+}
+.sidebar-toggle{display:none;background:none;border:1px solid #ddd;border-radius:9px;padding:6px 11px;font-size:18px;cursor:pointer;color:#333;align-items:center}
+
+/* Calendar area */
+.cal-area{flex:1;overflow:auto}
+.cal-header{background:#fff;border-bottom:1px solid #e5e5e0;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.cal-title{font-size:16px;font-weight:700}
+
+/* ===== MONTH ===== */
+.month-header-row{display:grid;grid-template-columns:repeat(7,1fr);background:#f0f0ec;border-bottom:1px solid #ddd}
+.month-header-cell{text-align:center;padding:8px 2px;font-size:12px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.month-cell{background:#fff;min-height:78px;padding:4px 3px;border-right:1px solid #e8e8e4;border-bottom:1px solid #e8e8e4;cursor:pointer;overflow:hidden}
+.month-cell:hover{background:#fafaf8}
+.month-day-num{font-size:14px;color:#333;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:600;margin-bottom:2px}
+.month-day-num.today{background:var(--uc);color:#fff;font-weight:700}
+.month-cell.other-month{background:#f8f8f5}
+.month-cell.other-month .month-day-num{color:#bbb;font-weight:400}
+.event-chip{border-radius:4px;padding:2px 5px;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;cursor:pointer;font-weight:600}
+.event-chip:hover{opacity:.85}
+.more-events{font-size:10px;color:#888;padding:1px 5px;cursor:pointer}
+@media(max-width:600px){
+  .month-cell{min-height:56px;padding:3px 2px}
+  .month-day-num{font-size:12px;width:22px;height:22px}
+  .event-chip{font-size:10px;padding:1px 3px}
+}
+
+/* ===== WEEK ===== */
+.week-wrap{overflow:auto}
+.week-grid{display:grid;grid-template-columns:56px repeat(7,1fr);background:#fff;min-width:600px}
+.week-day-header{padding:7px 4px;text-align:center;font-size:13px;color:#333;border-right:1px solid #e8e8e4;border-bottom:2px solid #ccc;background:#f0f0ec;font-weight:600}
+.week-day-header.today-col .day-num{background:var(--uc);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;margin:0 auto;font-weight:700}
+.week-day-header .day-name{font-size:11px;color:#777;margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.week-time-col{font-size:12px;color:#444;border-right:1px solid #e8e8e4;border-bottom:1px solid #e8e8e4;height:var(--slot);display:flex;align-items:flex-start;padding:2px 7px 0 0;justify-content:flex-end;font-weight:600;background:#fafaf8}
+.week-slot{border-right:1px solid #e8e8e4;border-bottom:1px solid #e8e8e4;height:var(--slot);position:relative;cursor:pointer}
+.week-slot:hover{background:#f5f5f0}
+.week-event{position:absolute;left:1px;right:1px;border-radius:4px;padding:2px 5px;font-size:11px;color:#fff;overflow:hidden;cursor:pointer;z-index:1;line-height:1.35;font-weight:600}
+.week-event:hover{opacity:.85;z-index:2}
+
+/* ===== AGENDA (mobile week) ===== */
+.agenda-wrap{padding:10px}
+.agenda-day{margin-bottom:10px}
+.agenda-day-header{font-size:15px;font-weight:700;color:#333;padding:7px 12px;background:#f0f0ec;border-radius:9px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.agenda-today-badge{background:var(--uc);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.agenda-event{display:flex;align-items:center;gap:12px;padding:11px 14px;background:#fff;border-radius:9px;margin-bottom:5px;cursor:pointer;border:1px solid #e8e8e4}
+.agenda-event:hover{background:#fafaf8}
+.agenda-event-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.agenda-event-title{font-size:14px;font-weight:600;color:#222}
+.agenda-event-time{font-size:12px;color:#888;margin-top:2px}
+.agenda-empty{font-size:13px;color:#bbb;padding:4px 12px;font-style:italic}
+
+/* ===== DAY VIEW (eventi posizionati con altezza reale) ===== */
+.day-view-wrap{background:#fff;display:grid;grid-template-columns:56px 1fr}
+.day-time-col{background:#fafaf8;border-right:1px solid #ddd}
+.day-time-slot{height:var(--slot);border-bottom:1px solid #e8e8e4;font-size:12px;color:#444;font-weight:600;display:flex;align-items:flex-start;padding:2px 7px 0 0;justify-content:flex-end}
+.day-events-col{position:relative}
+.day-bg-slot{height:var(--slot);border-bottom:1px solid #e8e8e4;cursor:pointer}
+.day-bg-slot:hover{background:#f5f5f0}
+.day-event-block{position:absolute;left:4px;right:4px;border-radius:7px;padding:5px 9px;color:#fff;cursor:pointer;overflow:hidden;line-height:1.35;box-shadow:0 1px 5px rgba(0,0,0,.18)}
+.day-event-block:hover{opacity:.88;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.day-event-block .ev-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-event-block .ev-time{font-size:11px;opacity:.9;margin-top:1px}
+
+/* ===== MODALI ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:#fff;border-radius:16px;padding:22px;width:370px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 36px rgba(0,0,0,.16)}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:14px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;color:#777;margin-bottom:4px;display:block;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.form-input{width:100%;background:#f5f5f0;border:1px solid #e0e0db;border-radius:9px;padding:9px 12px;font-size:14px;color:#222;font-family:inherit}
+.form-input:focus{outline:none;border-color:var(--uc);background:#fff}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center}
+.btn-cancel{background:none;border:1px solid #ddd;border-radius:9px;padding:9px 16px;font-size:14px;cursor:pointer;color:#333;font-weight:500}
+.btn-cancel:hover{background:#f5f5f0}
+.btn-save{border:none;border-radius:9px;padding:9px 16px;font-size:14px;cursor:pointer;color:#fff;font-weight:700}
+.btn-save:hover{opacity:.9}
+.btn-delete{background:none;border:1px solid #e24b4a;border-radius:9px;padding:9px 16px;font-size:14px;cursor:pointer;color:#e24b4a;margin-right:auto;font-weight:600}
+.btn-delete:hover{background:#fef2f2}
+.color-picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.color-swatch{width:27px;height:27px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0}
+.color-swatch.selected{border-color:#222;box-shadow:0 0 0 1px #fff inset}
+
+.share-modal{background:#fff;border-radius:16px;padding:22px;width:410px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 36px rgba(0,0,0,.16)}
+.share-link-box{display:flex;align-items:center;gap:8px;background:#f5f5f0;border:1px solid #e0e0db;border-radius:9px;padding:9px 12px;font-size:12px;word-break:break-all}
+.copy-btn{background:none;border:1px solid #ddd;border-radius:8px;padding:6px 13px;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:600}
+.copy-btn:hover{background:#f5f5f0}
+.member-add-row{display:flex;gap:8px;align-items:center}
+.color-mini-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.color-mini-swatch{width:23px;height:23px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.color-mini-swatch.selected{border-color:#222}
+
+.profile-modal{background:#fff;border-radius:16px;padding:26px;width:330px;max-width:95vw;text-align:center;box-shadow:0 8px 36px rgba(0,0,0,.16)}
+.profile-preview{width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;margin:0 auto 18px;transition:background .2s}
+
+.toast{position:fixed;bottom:24px;right:20px;background:#222;color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}
+.toast.show{opacity:1}
+
+.install-tip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:11px 14px;font-size:13px;color:#166534;line-height:1.5;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+    <div class="logo"><div class="logo-dot" id="logo-dot"></div>Cal Famiglia</div>
+    <div class="nav-group">
+      <button class="nav-btn" onclick="goToday()">Oggi</button>
+      <button class="nav-btn" onclick="navigate(-1)">‹</button>
+      <button class="nav-btn" onclick="navigate(1)">›</button>
+    </div>
+    <div class="view-toggle">
+      <button class="vbtn" onclick="setView('day')" id="v-day">Giorno</button>
+      <button class="vbtn active" onclick="setView('week')" id="v-week">Settimana</button>
+      <button class="vbtn" onclick="setView('month')" id="v-month">Mese</button>
+    </div>
+    <div class="topbar-right">
+      <button class="share-btn" onclick="openShare()">🔗 Condividi</button>
+      <button class="add-btn" onclick="openAddEvent(null,null)">+ Evento</button>
+      <div id="user-avatars" style="display:flex;gap:4px"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="mini-nav">
+        <button class="mini-nav-btn" onclick="miniNav(-1)">‹</button>
+        <span class="mini-month-label" id="mini-month-label"></span>
+        <button class="mini-nav-btn" onclick="miniNav(1)">›</button>
+      </div>
+      <table class="mini-cal">
+        <thead><tr id="mini-thead"></tr></thead>
+        <tbody id="mini-tbody"></tbody>
+      </table>
+      <div class="members-section">
+        <div class="sidebar-title">Membri</div>
+        <div class="fam-legend">
+          <div class="member-dot" style="background:var(--fam)"></div>
+          <span>Famiglia</span>
+        </div>
+        <div id="members-list"></div>
+      </div>
+    </div>
+
+    <div class="cal-area">
+      <div class="cal-header">
+        <span class="cal-title" id="cal-title"></span>
+      </div>
+      <div id="cal-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modale Evento -->
+<div id="event-modal" class="overlay" style="display:none" onclick="closeEventModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title">Nuovo Evento</div>
+    <div class="form-group">
+      <label class="form-label">Titolo</label>
+      <input class="form-input" id="ev-title" placeholder="Es. Allenamento Samu" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input class="form-input" type="date" id="ev-date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Orario</label>
+        <input class="form-input" type="time" id="ev-time" value="09:00" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Durata</label>
+        <select class="form-input" id="ev-duration">
+          <option value="30">30 min</option>
+          <option value="60" selected>1 ora</option>
+          <option value="90">1h 30 min</option>
+          <option value="120">2 ore</option>
+          <option value="150">2h 30 min</option>
+          <option value="180">3 ore</option>
+          <option value="240">4 ore</option>
+          <option value="300">5 ore</option>
+          <option value="480">8 ore</option>
+          <option value="allday">Tutto il giorno</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-input" id="ev-category">
+          <option value="personal">Personale</option>
+          <option value="family">Famiglia 👨‍👩‍👧</option>
+          <option value="work">Lavoro</option>
+          <option value="school">Scuola</option>
+          <option value="sport">Sport/Gara</option>
+          <option value="birthday">Compleanno 🎂</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note (facoltativo)</label>
+      <input class="form-input" id="ev-notes" placeholder="Aggiungi dettagli..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reminder</label>
+      <select class="form-input" id="ev-reminder">
+        <option value="none">Nessun reminder</option>
+        <option value="0">Al momento dell'evento</option>
+        <option value="10">10 minuti prima</option>
+        <option value="30" selected>30 minuti prima</option>
+        <option value="60">1 ora prima</option>
+        <option value="1440">1 giorno prima</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Colore evento</label>
+      <div class="color-picker-row" id="ev-color-picker"></div>
+    </div>
+    <div class="form-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- Modale Condivisione -->
+<div id="share-modal" class="overlay" style="display:none" onclick="closeShareModal(event)">
+  <div class="share-modal" onclick="event.stopPropagation()">
+    <div class="modal-title">🔗 Condividi Calendario</div>
+    <p style="font-size:13px;color:#888;margin-bottom:10px">Carica il file su GitHub Pages, poi condividi il link con la famiglia.</p>
+    <div class="share-link-box">
+      <span id="share-link-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="copy-btn" onclick="copyLink()">Copia</button>
+    </div>
+    <div style="margin-top:14px">
+      <div class="sidebar-title" style="margin-bottom:8px">Membri attuali</div>
+      <div id="share-members-list"></div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8e8e4">
+      <div class="sidebar-title" style="margin-bottom:6px">Aggiungi membro</div>
+      <div class="member-add-row">
+        <input class="form-input" id="new-member-name" placeholder="Nome (es. Giulia)" style="flex:1" />
+        <button class="btn-save" style="background:var(--uc)" onclick="addMember()">Aggiungi</button>
+      </div>
+      <div class="color-mini-row" id="new-member-color-picker"></div>
+    </div>
+    <div class="install-tip">
+      📱 <strong>Installa come app:</strong><br>
+      <strong>iPhone:</strong> Safari → icona condividi → "Aggiungi a schermata Home"<br>
+      <strong>Android:</strong> Chrome → menu ⋮ → "Aggiungi alla schermata home"
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeShareModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale Profilo -->
+<div id="profile-modal" class="overlay" style="display:none">
+  <div class="profile-modal">
+    <div class="modal-title">Benvenuto! 👋</div>
+    <p style="font-size:13px;color:#888;margin-bottom:16px">Inserisci il tuo nome e scegli un colore per i tuoi eventi.</p>
+    <div class="form-group">
+      <label class="form-label">Il tuo nome</label>
+      <input class="form-input" id="profile-name" placeholder="Es. Daniele" oninput="updateProfilePreview()" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Il tuo colore</label>
+      <div class="color-picker-row" id="profile-color-picker"></div>
+    </div>
+    <div class="profile-preview" id="profile-preview">?</div>
+    <button class="btn-save" style="background:var(--uc);width:100%;font-size:15px;padding:12px" onclick="doSaveProfile()">Entra nel Calendario ›</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS={
+  turchese:'#4dd9ac', blu:'#60a5fa', rosa:'#f472b6',
+  arancio:'#fb923c', verde:'#4ade80', viola:'#a78bfa',
+  rosso:'#f87171', giallo:'#fbbf24', grigio:'#94a3b8', menta:'#34d399'
+};
+const FAM_COLOR='#f59e0b';
+const CAL_ID='famcal_2025';
+const MONTHS=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const DAYS=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const SLOT_PX=50;
+
+let state={
+  view:'week', today:new Date(), current:new Date(), miniMonth:new Date(),
+  events:[], members:[], profile:null, hidden:new Set(), editId:null
+};
+
+/* ── Utilities ── */
+function pad(n){return String(n).padStart(2,'0')}
+function dstr(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function isSameDay(a,b){return dstr(a)===dstr(b)}
+function todayStr(){return dstr(state.today)}
+function getUK(){let k=localStorage.getItem(CAL_ID+'_uk');if(!k){k=Math.random().toString(36).slice(2);localStorage.setItem(CAL_ID+'_uk',k)}return k}
+
+/* ── Persistenza locale ── */
+function loadData(){
+  try{const e=localStorage.getItem(CAL_ID+'_events');if(e)state.events=JSON.parse(e)}catch(x){}
+  try{const m=localStorage.getItem(CAL_ID+'_members');if(m)state.members=JSON.parse(m)}catch(x){}
+  try{const p=localStorage.getItem(CAL_ID+'_profile_'+getUK());if(p)state.profile=JSON.parse(p)}catch(x){}
+}
+function saveEvents(){localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events))}
+function saveMembers(){localStorage.setItem(CAL_ID+'_members',JSON.stringify(state.members))}
+function saveProfileData(){localStorage.setItem(CAL_ID+'_profile_'+getUK(),JSON.stringify(state.profile))}
+
+/* ── Colori ── */
+function getEventColor(ev){
+  if(ev.category==='family')return FAM_COLOR;
+  if(ev.color)return ev.color;
+  const m=state.members.find(x=>x.key===ev.authorKey);
+  return m?m.color:'#94a3b8';
+}
+function getMember(key){return state.members.find(m=>m.key===key)}
+function getWeekStart(d){const r=new Date(d);r.setDate(r.getDate()-((r.getDay()+6)%7));return r}
+function getVisible(){return state.events.filter(ev=>ev.category==='family'||!state.hidden.has(ev.authorKey))}
+function isMobile(){return window.innerWidth<600}
+
+/* ── Navigazione ── */
+function setView(v){
+  state.view=v;
+  ['day','week','month'].forEach(x=>document.getElementById('v-'+x).classList.toggle('active',x===v));
+  renderCal();
+}
+function navigate(d){
+  if(state.view==='day')state.current=addDays(state.current,d);
+  else if(state.view==='week')state.current=addDays(state.current,d*7);
+  else{state.current.setMonth(state.current.getMonth()+d);state.current=new Date(state.current)}
+  renderCal();
+}
+function goToday(){state.current=new Date(state.today);renderCal()}
+function miniNav(d){state.miniMonth=new Date(state.miniMonth.getFullYear(),state.miniMonth.getMonth()+d,1);renderMini()}
+
+function renderAll(){renderAvatars();renderMembersList();renderMini();renderCal()}
+
+/* ── Avatar ── */
+function renderAvatars(){
+  const c=document.getElementById('user-avatars');c.innerHTML='';
+  state.members.forEach(m=>{
+    const av=document.createElement('div');av.className='avatar';
+    av.style.background=m.color;
+    av.title=m.name+(m.key===state.profile?.key?' (tu)':'');
+    av.textContent=m.name.charAt(0).toUpperCase();
+    av.style.opacity=state.hidden.has(m.key)?'0.3':'1';
+    av.onclick=()=>{if(m.key===state.profile?.key)openProfileModal();else toggleHide(m.key)};
+    c.appendChild(av);
+  });
+}
+
+/* ── Lista membri sidebar ── */
+function renderMembersList(){
+  const c=document.getElementById('members-list');c.innerHTML='';
+  state.members.forEach(m=>{
+    const item=document.createElement('div');
+    item.className='member-item'+(state.hidden.has(m.key)?' hidden':'');
+    item.innerHTML=`<div class="member-dot" style="background:${m.color}"></div><span class="member-name">${m.name}${m.key===state.profile?.key?' (tu)':''}</span>`;
+    item.onclick=()=>toggleHide(m.key);
+    c.appendChild(item);
+  });
+}
+function toggleHide(key){if(state.hidden.has(key))state.hidden.delete(key);else state.hidden.add(key);renderAll()}
+
+/* ── Mini calendario sidebar ── */
+function renderMini(){
+  const m=state.miniMonth;
+  document.getElementById('mini-month-label').textContent=MONTHS[m.getMonth()].slice(0,3)+' '+m.getFullYear();
+  document.getElementById('mini-thead').innerHTML=['L','M','M','G','V','S','D'].map(d=>`<th>${d}</th>`).join('');
+  const tbody=document.getElementById('mini-tbody');tbody.innerHTML='';
+  const first=new Date(m.getFullYear(),m.getMonth(),1);
+  let day=new Date(first);day.setDate(1-((first.getDay()+6)%7));
+  for(let r=0;r<6;r++){
+    const tr=document.createElement('tr');
+    for(let c=0;c<7;c++){
+      const td=document.createElement('td'),d=new Date(day);
+      td.textContent=d.getDate();
+      if(isSameDay(d,state.today))td.classList.add('today');
+      if(d.getMonth()!==m.getMonth())td.classList.add('other-month');
+      if(isSameDay(d,state.current))td.classList.add('selected');
+      td.onclick=()=>{state.current=new Date(d);setView('day');renderMini()};
+      tr.appendChild(td);day=addDays(day,1);
+    }
+    tbody.appendChild(tr);
+    if(day.getMonth()!==m.getMonth()&&r>=3)break;
+  }
+}
+
+/* ── Calendario principale ── */
+function renderCal(){
+  const title=document.getElementById('cal-title'),body=document.getElementById('cal-body');
+  if(state.view==='month')renderMonth(title,body);
+  else if(state.view==='week')renderWeek(title,body);
+  else renderDay(title,body);
+}
+
+/* MESE */
+function renderMonth(title,body){
+  const m=state.current;
+  title.textContent=MONTHS[m.getMonth()]+' '+m.getFullYear();
+  const evs=getVisible();
+  let html=`<div class="month-header-row">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="month-header-cell">${d}</div>`).join('')}</div><div class="month-grid">`;
+  const first=new Date(m.getFullYear(),m.getMonth(),1);
+  let day=new Date(first);day.setDate(1-((first.getDay()+6)%7));
+  for(let i=0;i<42;i++){
+    const d=new Date(day),ds=dstr(d);
+    const other=d.getMonth()!==m.getMonth(),today=isSameDay(d,state.today);
+    const de=evs.filter(e=>e.date===ds);
+    html+=`<div class="month-cell${other?' other-month':''}" onclick="cellClick('${ds}')">`;
+    html+=`<div class="month-day-num${today?' today':''}">${d.getDate()}</div>`;
+    de.slice(0,3).forEach(ev=>{
+      html+=`<div class="event-chip" style="background:${getEventColor(ev)}" onclick="event.stopPropagation();editEvent('${ev.id}')" title="${ev.title}">${ev.title}</div>`;
+    });
+    if(de.length>3)html+=`<div class="more-events">+${de.length-3} altri</div>`;
+    html+=`</div>`;
+    day=addDays(day,1);
+  }
+  html+=`</div>`;body.innerHTML=html;
+}
+
+/* SETTIMANA */
+function renderWeek(title,body){
+  const ws=getWeekStart(state.current),we=addDays(ws,6);
+  title.textContent=`${ws.getDate()} ${MONTHS[ws.getMonth()].slice(0,3)} — ${we.getDate()} ${MONTHS[we.getMonth()].slice(0,3)} ${we.getFullYear()}`;
+  if(isMobile()){renderWeekAgenda(ws,body);return}
+  const evs=getVisible();
+  let html=`<div class="week-wrap"><div class="week-grid" style="min-height:${24*SLOT_PX+44}px">`;
+  // header row
+  html+=`<div style="background:#f0f0ec;border-right:1px solid #e8e8e4;border-bottom:2px solid #ccc"></div>`;
+  for(let i=0;i<7;i++){
+    const d=addDays(ws,i),isT=isSameDay(d,state.today);
+    html+=`<div class="week-day-header${isT?' today-col':''}"><div class="day-name">${DAYS[d.getDay()]}</div><div class="day-num">${d.getDate()}</div></div>`;
+  }
+  // time slots
+  for(let h=0;h<24;h++){
+    html+=`<div class="week-time-col">${h>0?pad(h)+':00':''}</div>`;
+    for(let i=0;i<7;i++){
+      const d=addDays(ws,i),ds=dstr(d);
+      const se=evs.filter(e=>e.date===ds&&e.time&&parseInt(e.time)===h);
+      html+=`<div class="week-slot" onclick="cellClickTime('${ds}','${pad(h)}:00')">`;
+      se.forEach(ev=>{
+        const dur=ev.duration==='allday'?60:parseInt(ev.duration||60);
+        const hpx=Math.max(dur/60*SLOT_PX-2,14);
+        html+=`<div class="week-event" style="background:${getEventColor(ev)};height:${hpx}px" onclick="event.stopPropagation();editEvent('${ev.id}')">${ev.title}</div>`;
+      });
+      html+=`</div>`;
+    }
+  }
+  html+=`</div></div>`;body.innerHTML=html;
+}
+
+/* AGENDA mobile */
+function renderWeekAgenda(ws,body){
+  const evs=getVisible();
+  let html=`<div class="agenda-wrap">`;
+  for(let i=0;i<7;i++){
+    const d=addDays(ws,i),ds=dstr(d),isT=isSameDay(d,state.today);
+    const de=evs.filter(e=>e.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    html+=`<div class="agenda-day">`;
+    html+=`<div class="agenda-day-header">${isT?`<div class="agenda-today-badge">${d.getDate()}</div>`:d.getDate()} ${DAYS[d.getDay()]} ${MONTHS[d.getMonth()].slice(0,3)}</div>`;
+    if(!de.length){html+=`<div class="agenda-empty">Nessun evento</div>`}
+    else de.forEach(ev=>{
+      const durStr=ev.duration&&ev.duration!=='allday'?` · ${ev.duration} min`:'';
+      html+=`<div class="agenda-event" onclick="editEvent('${ev.id}')">
+        <div class="agenda-event-dot" style="background:${getEventColor(ev)}"></div>
+        <div><div class="agenda-event-title">${ev.title}</div>
+        <div class="agenda-event-time">${ev.time||'tutto il giorno'}${durStr}</div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`<button style="width:100%;margin-top:4px;padding:13px;background:none;border:1px dashed #ddd;border-radius:9px;font-size:14px;color:#888;cursor:pointer;font-weight:500" onclick="openAddEvent(null,null)">+ Aggiungi evento</button>`;
+  html+=`</div>`;body.innerHTML=html;
+}
+
+window.addEventListener('resize',()=>{if(state.view==='week')renderCal()});
+
+/* GIORNO — eventi posizionati con altezza proporzionale alla durata */
+function renderDay(title,body){
+  const d=state.current,ds=dstr(d);
+  title.textContent=`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const evs=getVisible().filter(e=>e.date===ds);
+  const totalH=24*SLOT_PX;
+
+  let timeHtml='',bgHtml='';
+  for(let h=0;h<24;h++){
+    timeHtml+=`<div class="day-time-slot">${h>0?pad(h)+':00':''}</div>`;
+    bgHtml+=`<div class="day-bg-slot" onclick="cellClickTime('${ds}','${pad(h)}:00')"></div>`;
+  }
+
+  let evHtml='';
+  evs.forEach(ev=>{
+    if(!ev.time)return;
+    const [hh,mm]=(ev.time+':00').split(':').map(Number);
+    const startPx=(hh*60+mm)/60*SLOT_PX;
+    const dur=ev.duration==='allday'?60:parseInt(ev.duration||60);
+    const hpx=Math.max(dur/60*SLOT_PX-4,24);
+    const col=getEventColor(ev);
+    evHtml+=`<div class="day-event-block"
+      style="background:${col};top:${startPx}px;height:${hpx}px"
+      onclick="event.stopPropagation();editEvent('${ev.id}')">
+      <div class="ev-title">${ev.title}</div>
+      ${hpx>40?`<div class="ev-time">${ev.time} · ${dur} min</div>`:''}
+    </div>`;
+  });
+
+  body.innerHTML=`<div class="day-view-wrap" style="height:${totalH}px">
+    <div class="day-time-col">${timeHtml}</div>
+    <div class="day-events-col" style="height:${totalH}px">
+      ${bgHtml}
+      ${evHtml}
+    </div>
+  </div>`;
+}
+
+/* ── Azioni celle ── */
+function cellClick(ds){openAddEvent(ds,null)}
+function cellClickTime(ds,time){openAddEvent(ds,time)}
+
+/* ── Modale evento ── */
+function openAddEvent(ds,time){
+  if(!state.profile){openProfileModal();return}
+  state.editId=null;
+  document.getElementById('modal-title').textContent='Nuovo Evento';
+  document.getElementById('ev-title').value='';
+  document.getElementById('ev-notes').value='';
+  document.getElementById('ev-date').value=ds||todayStr();
+  document.getElementById('ev-time').value=time||'09:00';
+  document.getElementById('ev-duration').value='60';
+  document.getElementById('ev-category').value='personal';
+  document.getElementById('ev-reminder').value='30';
+  buildColorPicker('ev-color-picker',state.profile.color);
+  document.getElementById('modal-actions').innerHTML=
+    `<button class="btn-cancel" onclick="closeEventModal()">Annulla</button>
+     <button class="btn-save" onclick="doSaveEvent()" style="background:${state.profile.color}">Salva</button>`;
+  document.getElementById('event-modal').style.display='flex';
+}
+
+function editEvent(id){
+  const ev=state.events.find(e=>e.id===id);if(!ev)return;
+  state.editId=id;
+  document.getElementById('modal-title').textContent='Modifica Evento';
+  document.getElementById('ev-title').value=ev.title;
+  document.getElementById('ev-notes').value=ev.notes||'';
+  document.getElementById('ev-date').value=ev.date;
+  document.getElementById('ev-time').value=ev.time||'09:00';
+  document.getElementById('ev-duration').value=ev.duration||'60';
+  document.getElementById('ev-category').value=ev.category||'personal';
+  document.getElementById('ev-reminder').value=ev.reminder||'30';
+  buildColorPicker('ev-color-picker',getEventColor(ev));
+  const canEdit=ev.authorKey===state.profile?.key;
+  const col=getEventColor(ev);
+  const author=getMember(ev.authorKey);
+  document.getElementById('modal-actions').innerHTML=canEdit
+    ?`<button class="btn-delete" onclick="doDeleteEvent('${id}')">Elimina</button>
+      <button class="btn-cancel" onclick="closeEventModal()">Annulla</button>
+      <button class="btn-save" onclick="doSaveEvent()" style="background:${col}">Salva</button>`
+    :`<span style="font-size:12px;color:#aaa;flex:1">Evento di ${author?.name||'?'}</span>
+      <button class="btn-cancel" onclick="closeEventModal()">Chiudi</button>`;
+  document.getElementById('event-modal').style.display='flex';
+}
+
+function doSaveEvent(){
+  const title=document.getElementById('ev-title').value.trim();
+  if(!title){showToast('Inserisci un titolo!');return}
+  const date=document.getElementById('ev-date').value;
+  const time=document.getElementById('ev-time').value;
+  const duration=document.getElementById('ev-duration').value;
+  const category=document.getElementById('ev-category').value;
+  const notes=document.getElementById('ev-notes').value;
+  const reminder=document.getElementById('ev-reminder').value;
+  const color=document.querySelector('#ev-color-picker .selected')?.dataset.color||state.profile.color;
+  if(state.editId){
+    const ev=state.events.find(e=>e.id===state.editId);
+    if(ev&&ev.authorKey===state.profile.key)Object.assign(ev,{title,date,time,duration,category,notes,color,reminder});
+  }else{
+    const newEv={id:Date.now().toString(36)+Math.random().toString(36).slice(2),title,date,time,duration,category,notes,color,reminder,authorKey:state.profile.key};
+    state.events.push(newEv);
+    if(reminder!=='none')scheduleReminder(newEv);
+  }
+  saveEvents();closeEventModal();renderAll();showToast('Evento salvato ✓');
+}
+
+function doDeleteEvent(id){
+  state.events=state.events.filter(e=>e.id!==id);
+  saveEvents();closeEventModal();renderAll();showToast('Evento eliminato');
+}
+function closeEventModal(e){if(e&&e.target.id!=='event-modal')return;document.getElementById('event-modal').style.display='none'}
+
+/* ── Reminder ── */
+function scheduleReminder(ev){
+  if(!('Notification' in window))return;
+  const go=()=>{
+    const evTime=new Date(ev.date+'T'+ev.time+':00');
+    const at=evTime.getTime()-(parseInt(ev.reminder||30)*60000);
+    if(at>Date.now())setTimeout(()=>new Notification('📅 Cal Famiglia',{body:ev.title,tag:ev.id}),at-Date.now());
+  };
+  if(Notification.permission==='granted')go();
+  else if(Notification.permission!=='denied')Notification.requestPermission().then(p=>{if(p==='granted')go()});
+}
+function scheduleAllReminders(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  state.events.forEach(ev=>{if(ev.reminder&&ev.reminder!=='none')scheduleReminder(ev)});
+}
+
+/* ── Color picker ── */
+function buildColorPicker(cid,selected){
+  const c=document.getElementById(cid);c.innerHTML='';
+  const all={...COLORS,'famiglia':FAM_COLOR};
+  Object.entries(all).forEach(([name,hex])=>{
+    const sw=document.createElement('div');
+    sw.className='color-swatch'+(hex===selected?' selected':'');
+    sw.style.background=hex;sw.dataset.color=hex;sw.title=name;
+    sw.onclick=()=>{c.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));sw.classList.add('selected')};
+    c.appendChild(sw);
+  });
+}
+function buildMiniColorPicker(cid,selected){
+  const c=document.getElementById(cid);c.innerHTML='';
+  Object.values(COLORS).forEach(hex=>{
+    const sw=document.createElement('div');
+    sw.className='color-mini-swatch'+(hex===selected?' selected':'');
+    sw.style.background=hex;sw.dataset.color=hex;
+    sw.onclick=()=>{c.querySelectorAll('.color-mini-swatch').forEach(s=>s.classList.remove('selected'));sw.classList.add('selected')};
+    c.appendChild(sw);
+  });
+}
+
+/* ── Condivisione ── */
+function openShare(){
+  document.getElementById('share-link-text').textContent=location.href.split('?')[0];
+  document.getElementById('share-members-list').innerHTML=state.members
+    .map(m=>`<div class="fam-legend"><div class="member-dot" style="background:${m.color}"></div><span>${m.name}${m.key===state.profile?.key?' (tu)':''}</span></div>`).join('');
+  const usedColors=state.members.map(m=>m.color);
+  const free=Object.values(COLORS).find(c=>!usedColors.includes(c))||'#94a3b8';
+  buildMiniColorPicker('new-member-color-picker',free);
+  document.getElementById('share-modal').style.display='flex';
+}
+function closeShareModal(e){if(e&&e.target.id!=='share-modal')return;document.getElementById('share-modal').style.display='none'}
+function addMember(){
+  const name=document.getElementById('new-member-name').value.trim();
+  if(!name){showToast('Inserisci un nome!');return}
+  const color=document.querySelector('#new-member-color-picker .selected')?.dataset.color||'#94a3b8';
+  state.members.push({name,color,key:'guest_'+Date.now().toString(36)});
+  saveMembers();document.getElementById('new-member-name').value='';
+  openShare();renderAll();showToast(`${name} aggiunto!`);
+}
+function copyLink(){
+  const txt=document.getElementById('share-link-text').textContent;
+  navigator.clipboard.writeText(txt).then(()=>showToast('🔗 Link copiato!')).catch(()=>showToast('Copia il link manualmente'));
+}
+
+/* ── Profilo ── */
+function openProfileModal(){
+  document.getElementById('profile-name').value=state.profile?.name||'';
+  buildColorPicker('profile-color-picker',state.profile?.color||'#4dd9ac');
+  updateProfilePreview();
+  document.getElementById('profile-modal').style.display='flex';
+}
+function updateProfilePreview(){
+  const name=document.getElementById('profile-name').value.trim();
+  const color=document.querySelector('#profile-color-picker .selected')?.dataset.color||'#4dd9ac';
+  const p=document.getElementById('profile-preview');
+  p.textContent=name?name.charAt(0).toUpperCase():'?';
+  p.style.background=color;
+}
+function doSaveProfile(){
+  const name=document.getElementById('profile-name').value.trim();
+  if(!name){showToast('Inserisci il tuo nome!');return}
+  const color=document.querySelector('#profile-color-picker .selected')?.dataset.color||'#4dd9ac';
+  state.profile={name,color,key:getUK()};
+  saveProfileData();
+  const ex=state.members.find(m=>m.key===state.profile.key);
+  if(!ex)state.members.push({name,color,key:state.profile.key});
+  else{ex.name=name;ex.color=color}
+  saveMembers();
+  document.getElementById('logo-dot').style.background=color;
+  document.querySelector(':root').style.setProperty('--uc',color);
+  document.getElementById('profile-modal').style.display='none';
+  renderAll();showToast('Benvenuto, '+name+'! 👋');
+}
+
+/* ── UI helpers ── */
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+/* ── Notifiche ── */
+function requestNotifPermission(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default')
+    Notification.requestPermission().then(p=>{if(p==='granted'){showToast('🔔 Notifiche attivate!');scheduleAllReminders()}});
+}
+
+/* ── Init ── */
+function init(){
+  loadData();
+  if(!state.profile){
+    buildColorPicker('profile-color-picker','#4dd9ac');
+    document.getElementById('profile-modal').style.display='flex';
+  }else{
+    document.getElementById('logo-dot').style.background=state.profile.color;
+    document.querySelector(':root').style.setProperty('--uc',state.profile.color);
+    const ex=state.members.find(m=>m.key===state.profile.key);
+    if(!ex){state.members.push({...state.profile});saveMembers()}
+    setTimeout(requestNotifPermission,2500);
+    scheduleAllReminders();
+  }
+  renderAll();
+}
+init();
+</script>
+</body>
+</html>
