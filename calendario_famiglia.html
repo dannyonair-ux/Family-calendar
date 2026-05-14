@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="Cal Famiglia">
 <meta name="theme-color" content="#ffffff">
 <title>Calendario Famiglia</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:#222;font-size:15px}
@@ -363,15 +366,51 @@ function isSameDay(a,b){return dstr(a)===dstr(b)}
 function todayStr(){return dstr(state.today)}
 function getUK(){let k=localStorage.getItem(CAL_ID+'_uk');if(!k){k=Math.random().toString(36).slice(2);localStorage.setItem(CAL_ID+'_uk',k)}return k}
 
-/* ── Persistenza locale ── */
+/* ── Firebase config ── */
+const FB_CONFIG={
+  apiKey:"AIzaSyAcrqhWJcOV8guq3E6393sCQYhRP_vdxos",
+  authDomain:"calendario-famiglia-ed5f0.firebaseapp.com",
+  databaseURL:"https://calendario-famiglia-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"calendario-famiglia-ed5f0",
+  storageBucket:"calendario-famiglia-ed5f0.firebasestorage.app",
+  messagingSenderId:"771223193675",
+  appId:"1:771223193675:web:c3415a870d1716ff1525ce"
+};
+let fbDb=null;
+function initFirebase(){
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    fbDb=firebase.database();
+    fbDb.ref('events').on('value',snap=>{
+      const val=snap.val();
+      state.events=val?Object.values(val):[];
+      renderAll();
+    });
+    fbDb.ref('members').on('value',snap=>{
+      const val=snap.val();
+      if(val){state.members=Object.values(val);renderAll();}
+    });
+    showToast('🔥 Sincronizzazione attiva!');
+  }catch(e){console.warn('Firebase non disponibile',e)}
+}
+
+/* ── Persistenza (locale + Firebase) ── */
 function loadData(){
   try{const e=localStorage.getItem(CAL_ID+'_events');if(e)state.events=JSON.parse(e)}catch(x){}
   try{const m=localStorage.getItem(CAL_ID+'_members');if(m)state.members=JSON.parse(m)}catch(x){}
   try{const p=localStorage.getItem(CAL_ID+'_profile_'+getUK());if(p)state.profile=JSON.parse(p)}catch(x){}
 }
-function saveEvents(){localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events))}
-function saveMembers(){localStorage.setItem(CAL_ID+'_members',JSON.stringify(state.members))}
-function saveProfileData(){localStorage.setItem(CAL_ID+'_profile_'+getUK(),JSON.stringify(state.profile))}
+function saveEvents(){
+  localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events));
+  if(fbDb){const obj={};state.events.forEach(ev=>{obj[ev.id]=ev});fbDb.ref('events').set(obj).catch(()=>{});}
+}
+function saveMembers(){
+  localStorage.setItem(CAL_ID+'_members',JSON.stringify(state.members));
+  if(fbDb){const obj={};state.members.forEach(m=>{obj[m.key]=m});fbDb.ref('members').set(obj).catch(()=>{});}
+}
+function saveProfileData(){
+  localStorage.setItem(CAL_ID+'_profile_'+getUK(),JSON.stringify(state.profile));
+}
 
 /* ── Colori ── */
 function getEventColor(ev){
@@ -783,6 +822,7 @@ function normalizeTime(t){
 /* ── Init ── */
 function init(){
   loadData();
+  initFirebase();
   if(!state.profile){
     buildColorPicker('profile-color-picker','#4dd9ac');
     document.getElementById('profile-modal').style.display='flex';
