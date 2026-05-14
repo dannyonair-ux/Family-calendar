@@ -130,7 +130,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
 .day-event-block .ev-time{font-size:11px;opacity:.9;margin-top:1px}
 
 /* ===== MODALI ===== */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:12px;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal{background:#fff;border-radius:16px;padding:22px;width:370px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 36px rgba(0,0,0,.16)}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:14px}
 .form-group{margin-bottom:12px}
@@ -234,8 +234,8 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
         <input class="form-input" type="date" id="ev-date" />
       </div>
       <div class="form-group">
-        <label class="form-label">Orario (HH:MM)</label>
-        <input class="form-input" type="text" id="ev-time" value="09:00" placeholder="09:00" maxlength="5" inputmode="numeric" oninput="formatTimeInput(this)" />
+        <label class="form-label">Orario</label>
+        <input class="form-input" type="time" id="ev-time" value="09:00" />
       </div>
     </div>
     <div class="form-row">
@@ -670,7 +670,7 @@ function doSaveEvent(){
   const title=document.getElementById('ev-title').value.trim();
   if(!title){showToast('Inserisci un titolo!');return}
   const date=document.getElementById('ev-date').value;
-  const time=normalizeTime(document.getElementById('ev-time').value);
+  const time=document.getElementById('ev-time').value;
   const duration=document.getElementById('ev-duration').value;
   const category=document.getElementById('ev-category').value;
   const notes=document.getElementById('ev-notes').value;
