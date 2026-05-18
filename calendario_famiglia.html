@@ -243,8 +243,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
       <div class="form-group">
         <label class="form-label">Orario</label>
         <input class="form-input" type="time" id="ev-time" value="09:00"
-          onclick="shrinkModalForClock()"
-          onchange="restoreModal()" />
+          onclick="hideModalForClock(this)" />
       </div>
     </div>
     <div class="form-row">
@@ -633,21 +632,25 @@ function renderDay(title,body){
     </div>`;
   });
 
-  // Eventi tutto il giorno: strisce verticali a sinistra della griglia oraria
-  // Distribuiti in colonne se multipli
+  // Eventi tutto il giorno: striscia che copre tutta la giornata
+  // con etichetta colorata in cima e sfondo semitrasparente
   const alldayW = alldayEvs.length > 0 ? Math.floor(100/alldayEvs.length) : 0;
   let alldayHtml='';
   alldayEvs.forEach((ev,i)=>{
     const col=getEventColor(ev);
     const left=i*alldayW;
+    // Sfondo semitrasparente tutta altezza
     alldayHtml+=`<div onclick="editEvent('${ev.id}')"
       style="position:absolute;top:0;left:${left}%;width:${alldayW-1}%;height:100%;
-             background:${col};opacity:0.22;border-radius:4px;cursor:pointer;z-index:0"></div>
-      <div onclick="editEvent('${ev.id}')"
-      style="position:absolute;top:8px;left:${left}%;width:${alldayW-1}%;
-             writing-mode:vertical-rl;text-orientation:mixed;
-             font-size:12px;font-weight:700;color:${col};padding:4px 0 0 4px;
-             cursor:pointer;z-index:1;overflow:hidden;max-height:96%">${ev.title}</div>`;
+             background:${col};opacity:0.15;border-radius:4px;cursor:pointer;z-index:0;pointer-events:none"></div>`;
+    // Etichetta orizzontale appiccicata in cima, con bordo colorato a sinistra
+    alldayHtml+=`<div onclick="editEvent('${ev.id}')"
+      style="position:sticky;top:0;left:${left}%;width:${alldayW-1}%;
+             background:${col};color:#fff;
+             font-size:11px;font-weight:700;padding:4px 6px;
+             border-radius:4px 4px 0 0;cursor:pointer;z-index:3;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+             box-shadow:0 1px 4px rgba(0,0,0,.15)">${ev.title}</div>`;
   });
 
   body.innerHTML=`<div class="day-view-wrap" style="height:${totalH}px;position:relative">
@@ -880,21 +883,35 @@ function selectPrefView(v){
 }
 
 /* ── Orologio Android: rimpicciolisce il modal per far vedere "Imposta" ── */
-function shrinkModalForClock(){
-  const modal=document.querySelector('#event-modal .modal');
-  if(!modal)return;
-  // Sposta il modal in alto e riducilo così il dialog orologio ha spazio sotto
-  modal.style.transition='transform 0.2s, max-height 0.2s';
-  modal.style.transform='translateY(-40px)';
-  modal.style.maxHeight='45vh';
-  document.getElementById('event-modal').style.alignItems='flex-start';
-  document.getElementById('event-modal').style.paddingTop='4px';
-}
-function restoreModal(){
-  const modal=document.querySelector('#event-modal .modal');
-  if(!modal)return;
-  modal.style.transform='';
-  modal.style.maxHeight='90vh';
+function hideModalForClock(inputEl){
+  // Nascondi il modal così il dialog orologio Android occupa tutto lo schermo
+  // e il pulsante "Imposta" è visibile
+  const overlay=document.getElementById('event-modal');
+  const modal=overlay.querySelector('.modal');
+  if(!overlay||!modal)return;
+  // Salva il valore corrente
+  const savedVal=inputEl.value;
+  // Nascondi il modal ma mantieni l'overlay invisibile (non blocca il picker)
+  modal.style.visibility='hidden';
+  overlay.style.background='transparent';
+  overlay.style.pointerEvents='none';
+  // Quando l'utente torna alla pagina (dopo aver premuto Imposta/Annulla)
+  // ripristina il modal
+  const restore=()=>{
+    modal.style.visibility='visible';
+    overlay.style.background='rgba(0,0,0,.45)';
+    overlay.style.pointerEvents='';
+    window.removeEventListener('focus',restore);
+    document.removeEventListener('visibilitychange',onVisible);
+  };
+  const onVisible=()=>{if(document.visibilityState==='visible')restore()};
+  // Piccolo delay per dare tempo ad Android di aprire il picker
+  setTimeout(()=>{
+    window.addEventListener('focus',restore,{once:true});
+    document.addEventListener('visibilitychange',onVisible);
+    // Fallback: ripristina dopo 30 secondi comunque
+    setTimeout(restore,30000);
+  },300);
 }
 
 /* ── Swipe navigation ── */
@@ -936,11 +953,17 @@ function init(){
     ['day','week','month'].forEach(x=>document.getElementById('v-'+x).classList.toggle('active',x===prefView));
   }
   renderAll();
-  // Splash screen: scompare dopo 1.5 secondi
-  setTimeout(()=>{
-    const s=document.getElementById('splash');
-    if(s){s.style.opacity='0';setTimeout(()=>s.remove(),500);}
-  },1500);
+  // Splash: mostrala solo al primo avvio, non ad ogni reload
+  const s=document.getElementById('splash');
+  if(s){
+    // Se già mostrata in questa sessione, rimuovi subito
+    if(sessionStorage.getItem('splashShown')){
+      s.remove();
+    } else {
+      sessionStorage.setItem('splashShown','1');
+      setTimeout(()=>{s.style.opacity='0';setTimeout(()=>s.remove(),400);},1200);
+    }
+  }
 }
 init();
 </script>
