@@ -166,6 +166,17 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
 .install-tip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:11px 14px;font-size:13px;color:#166534;line-height:1.5;margin-top:12px}
 
 
+
+/* ── iOS drum picker ── */
+.picker-wrap{display:flex;align-items:center;justify-content:center;gap:0;background:#f0f0ec;border-radius:12px;overflow:hidden;position:relative;height:216px}
+.picker-col{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:216px}
+.picker-col::-webkit-scrollbar{display:none}
+.picker-item{height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#aaa;scroll-snap-align:center;user-select:none}
+.picker-item.center-item{color:#222;font-weight:600;font-size:22px}
+.picker-sep{font-size:26px;font-weight:700;color:#333;padding:0 4px;z-index:2;pointer-events:none}
+.picker-overlay-top{position:absolute;top:0;left:0;right:0;height:86px;background:linear-gradient(to bottom,rgba(240,240,236,1),rgba(240,240,236,0));pointer-events:none;z-index:1}
+.picker-overlay-bot{position:absolute;bottom:0;left:0;right:0;height:86px;background:linear-gradient(to top,rgba(240,240,236,1),rgba(240,240,236,0));pointer-events:none;z-index:1}
+.picker-line{position:absolute;top:50%;left:0;right:0;height:44px;transform:translateY(-50%);border-top:1.5px solid #ccc;border-bottom:1.5px solid #ccc;pointer-events:none;z-index:2}
 </style>
 </head>
 <body>
@@ -206,6 +217,15 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
         <thead><tr id="mini-thead"></tr></thead>
         <tbody id="mini-tbody"></tbody>
       </table>
+      <div style="margin-top:14px">
+        <div class="sidebar-title">Vista preferita</div>
+        <div style="display:flex;gap:4px;margin-bottom:2px">
+          <button id="sb-pv-day" onclick="setView('day')" style="flex:1;padding:6px 2px;border:1px solid #ddd;border-radius:7px;background:#f5f5f0;cursor:pointer;font-size:12px;font-weight:500">Giorno</button>
+          <button id="sb-pv-week" onclick="setView('week')" style="flex:1;padding:6px 2px;border:1px solid #ddd;border-radius:7px;background:#f5f5f0;cursor:pointer;font-size:12px;font-weight:500">Sett.</button>
+          <button id="sb-pv-month" onclick="setView('month')" style="flex:1;padding:6px 2px;border:1px solid #ddd;border-radius:7px;background:#f5f5f0;cursor:pointer;font-size:12px;font-weight:500">Mese</button>
+        </div>
+        <div style="font-size:10px;color:#bbb;text-align:center;margin-bottom:2px">tocca per cambiare e salvare</div>
+      </div>
       <div class="members-section">
         <div class="sidebar-title">Membri</div>
         <div class="fam-legend">
@@ -242,10 +262,13 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
       </div>
       <div class="form-group">
         <label class="form-label">Orario</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <select class="form-input" id="ev-time-h" style="flex:1;font-size:20px;font-weight:700;text-align:center;height:52px;cursor:pointer" onchange="syncEvTime()"><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-          <span style="font-size:24px;font-weight:700;color:#444">:</span>
-          <select class="form-input" id="ev-time-m" style="flex:1;font-size:20px;font-weight:700;text-align:center;height:52px;cursor:pointer" onchange="syncEvTime()"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+        <div class="picker-wrap" id="picker-wrap">
+          <div class="picker-col" id="picker-h"><div class="picker-item" style="height:86px"></div><div class="picker-item" data-val="00">00</div><div class="picker-item" data-val="01">01</div><div class="picker-item" data-val="02">02</div><div class="picker-item" data-val="03">03</div><div class="picker-item" data-val="04">04</div><div class="picker-item" data-val="05">05</div><div class="picker-item" data-val="06">06</div><div class="picker-item" data-val="07">07</div><div class="picker-item" data-val="08">08</div><div class="picker-item" data-val="09">09</div><div class="picker-item" data-val="10">10</div><div class="picker-item" data-val="11">11</div><div class="picker-item" data-val="12">12</div><div class="picker-item" data-val="13">13</div><div class="picker-item" data-val="14">14</div><div class="picker-item" data-val="15">15</div><div class="picker-item" data-val="16">16</div><div class="picker-item" data-val="17">17</div><div class="picker-item" data-val="18">18</div><div class="picker-item" data-val="19">19</div><div class="picker-item" data-val="20">20</div><div class="picker-item" data-val="21">21</div><div class="picker-item" data-val="22">22</div><div class="picker-item" data-val="23">23</div><div class="picker-item" style="height:86px"></div></div>
+          <div class="picker-sep">:</div>
+          <div class="picker-col" id="picker-m"><div class="picker-item" style="height:86px"></div><div class="picker-item" data-val="00">00</div><div class="picker-item" data-val="15">15</div><div class="picker-item" data-val="30">30</div><div class="picker-item" data-val="45">45</div><div class="picker-item" style="height:86px"></div></div>
+          <div class="picker-overlay-top"></div>
+          <div class="picker-overlay-bot"></div>
+          <div class="picker-line"></div>
         </div>
         <input type="hidden" id="ev-time" value="09:00" />
       </div>
@@ -449,6 +472,11 @@ function isMobile(){return window.innerWidth<600}
 function setView(v){
   state.view=v;
   ['day','week','month'].forEach(x=>document.getElementById('v-'+x).classList.toggle('active',x===v));
+  // Evidenzia sidebar
+  ['day','week','month'].forEach(x=>{
+    const btn=document.getElementById('sb-pv-'+x);
+    if(btn){btn.style.background=x===v?'var(--uc)':'#f5f5f0';btn.style.color=x===v?'#fff':'#333';btn.style.border=x===v?'1px solid var(--uc)':'1px solid #ddd';}
+  });
   // Salva vista preferita per questo utente
   localStorage.setItem(CAL_ID+'_prefview_'+getUK(), v);
   renderCal();
@@ -900,20 +928,41 @@ function selectPrefView(v){
 
 
 
-/* ── Selettore orario ── */
+/* ── iOS drum picker ── */
+function pickerScrollTo(colId, val){
+  const col=document.getElementById(colId);
+  if(!col)return;
+  const items=[...col.querySelectorAll('.picker-item[data-val]')];
+  const idx=items.findIndex(el=>el.dataset.val===String(val).padStart(2,'0'));
+  if(idx>=0) col.scrollTop = idx*44;
+}
+function pickerGetVal(colId){
+  const col=document.getElementById(colId);
+  if(!col)return'00';
+  const idx=Math.round(col.scrollTop/44);
+  const items=[...col.querySelectorAll('.picker-item[data-val]')];
+  return items[idx]?items[idx].dataset.val:'00';
+}
 function syncEvTime(){
-  const h=document.getElementById('ev-time-h').value;
-  const m=document.getElementById('ev-time-m').value;
+  const h=pickerGetVal('picker-h');
+  const m=pickerGetVal('picker-m');
   document.getElementById('ev-time').value=h+':'+m;
 }
 function initDrum(hVal,mVal){
-  const h=document.getElementById('ev-time-h');
-  const m=document.getElementById('ev-time-m');
-  if(h)h.value=String(parseInt(hVal||9)).padStart(2,'0');
-  // Arrotonda i minuti al multiplo di 5 più vicino
-  const mInt=Math.round(parseInt(mVal||0)/15)*15%60;
-  if(m)m.value=String(mInt).padStart(2,'0');
-  syncEvTime();
+  // Arrotonda minuti al multiplo di 15 più vicino
+  const mInt=(Math.round(parseInt(mVal||0)/15)*15)%60;
+  setTimeout(()=>{
+    pickerScrollTo('picker-h', String(parseInt(hVal||9)).padStart(2,'0'));
+    pickerScrollTo('picker-m', String(mInt).padStart(2,'0'));
+    syncEvTime();
+    // Aggiorna ev-time mentre l'utente scrolla
+    ['picker-h','picker-m'].forEach(id=>{
+      const col=document.getElementById(id);
+      if(!col)return;
+      let t;
+      col.addEventListener('scroll',()=>{clearTimeout(t);t=setTimeout(syncEvTime,80)},{passive:true});
+    });
+  },50);
 }
 
 /* ── Swipe navigation ── */
