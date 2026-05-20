@@ -81,8 +81,10 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
 .month-cell:hover{background:#fafaf8}
 .month-day-num{font-size:14px;color:#333;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:600;margin-bottom:2px}
 .month-day-num.today{background:var(--uc);color:#fff;font-weight:700}
+.month-day-num.festivo{color:#e24b4a;font-weight:700}
 .month-cell.other-month{background:#f8f8f5}
 .month-cell.other-month .month-day-num{color:#bbb;font-weight:400}
+.month-day-num.weekend{color:#e24b4a;font-weight:600}
 .event-chip{border-radius:4px;padding:2px 5px;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;cursor:pointer;font-weight:600}
 .event-chip:hover{opacity:.85}
 .more-events{font-size:10px;color:#888;padding:1px 5px;cursor:pointer}
@@ -177,6 +179,10 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
 .picker-overlay-top{position:absolute;top:0;left:0;right:0;height:86px;background:linear-gradient(to bottom,rgba(240,240,236,1),rgba(240,240,236,0));pointer-events:none;z-index:1}
 .picker-overlay-bot{position:absolute;bottom:0;left:0;right:0;height:86px;background:linear-gradient(to top,rgba(240,240,236,1),rgba(240,240,236,0));pointer-events:none;z-index:1}
 .picker-line{position:absolute;top:50%;left:0;right:0;height:44px;transform:translateY(-50%);border-top:1.5px solid #ccc;border-bottom:1.5px solid #ccc;pointer-events:none;z-index:2}
+
+.month-banner{width:100%;overflow:hidden;border-bottom:1px solid #e8e8e4}
+.month-banner svg{display:block;width:100%;height:70px}
+@media(max-width:600px){.month-banner svg{height:55px}}
 </style>
 </head>
 <body>
@@ -394,7 +400,27 @@ const FAM_COLOR='#f59e0b';
 const CAL_ID='famcal_2025';
 const MONTHS=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const DAYS=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+
+// Festività italiane fisse (MM-DD)
+const FESTIVITA={
+  '01-01':'Capodanno','01-06':'Epifania','04-25':'Liberazione',
+  '05-01':'Festa Lavoro','06-02':'Repubblica','08-15':'Ferragosto',
+  '11-01':'Ognissanti','12-08':'Immacolata','12-25':'Natale','12-26':'S.Stefano'
+};
+function isFestivo(d){
+  const key=`${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if(FESTIVITA[key])return true;
+  // Domenica
+  if(d.getDay()===0)return true;
+  return false;
+}
+function getFestivo(d){
+  const key=`${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return FESTIVITA[key]||null;
+}
 const SLOT_PX=50;
+const MONTH_SVG={"0": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#e8f4fd\"/><text x=\"20\" y=\"55\" font-size=\"40\">\u2744\ufe0f</text><text x=\"70\" y=\"55\" font-size=\"40\">\u26c4</text><text x=\"120\" y=\"55\" font-size=\"40\">\u2744\ufe0f</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#5b9bd5\" font-family=\"system-ui\" font-weight=\"600\">Gennaio</text></svg>", "1": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#fde8f0\"/><text x=\"20\" y=\"55\" font-size=\"40\">\u2764\ufe0f</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udf39</text><text x=\"120\" y=\"55\" font-size=\"40\">\u2764\ufe0f</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#e24b7a\" font-family=\"system-ui\" font-weight=\"600\">Febbraio</text></svg>", "2": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#f0fde8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf38</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udf3c</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf31</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#5ba55b\" font-family=\"system-ui\" font-weight=\"600\">Marzo</text></svg>", "3": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#fffde8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf37</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83d\udc23</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf26\ufe0f</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#b5a520\" font-family=\"system-ui\" font-weight=\"600\">Aprile</text></svg>", "4": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#edfde8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf3f</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83e\udd8b</text><text x=\"120\" y=\"55\" font-size=\"40\">\u2600\ufe0f</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#3a9a3a\" font-family=\"system-ui\" font-weight=\"600\">Maggio</text></svg>", "5": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#fffae8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\u2600\ufe0f</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udfd6\ufe0f</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf0a</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#d4920a\" font-family=\"system-ui\" font-weight=\"600\">Giugno</text></svg>", "6": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#e8f7fd\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udfd6\ufe0f</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udf66</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf1e</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#0a90d4\" font-family=\"system-ui\" font-weight=\"600\">Luglio</text></svg>", "7": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#e8f7fd\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf0a</text><text x=\"70\" y=\"55\" font-size=\"40\">\u26f1\ufe0f</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83d\udc1a</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#0a90d4\" font-family=\"system-ui\" font-weight=\"600\">Agosto</text></svg>", "8": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#f5e8fd\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf47</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udf42</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf3e</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#7a3aaa\" font-family=\"system-ui\" font-weight=\"600\">Settembre</text></svg>", "9": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#fdf0e8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf42</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83c\udf30</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf83</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#c4620a\" font-family=\"system-ui\" font-weight=\"600\">Ottobre</text></svg>", "10": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#eeeef0\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf41</text><text x=\"70\" y=\"55\" font-size=\"40\">\ud83d\udd6f\ufe0f</text><text x=\"120\" y=\"55\" font-size=\"40\">\u2601\ufe0f</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#666688\" font-family=\"system-ui\" font-weight=\"600\">Novembre</text></svg>", "11": "<svg viewBox=\"0 0 400 80\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"80\" fill=\"#fde8e8\"/><text x=\"20\" y=\"55\" font-size=\"40\">\ud83c\udf84</text><text x=\"70\" y=\"55\" font-size=\"40\">\u2b50</text><text x=\"120\" y=\"55\" font-size=\"40\">\ud83c\udf81</text><text x=\"200\" y=\"45\" font-size=\"28\" fill=\"#cc2222\" font-family=\"system-ui\" font-weight=\"600\">Dicembre</text></svg>"};
+
 
 let state={
   view:'week', today:new Date(), current:new Date(), miniMonth:new Date(),
@@ -556,7 +582,8 @@ function renderMonth(title,body){
   const m=state.current;
   title.textContent=MONTHS[m.getMonth()]+' '+m.getFullYear();
   const evs=getVisible();
-  let html=`<div class="month-header-row">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="month-header-cell">${d}</div>`).join('')}</div><div class="month-grid">`;
+  const bannerSvg=MONTH_SVG[m.getMonth()]||'';
+  let html=`<div class="month-banner">${bannerSvg}</div><div class="month-header-row">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="month-header-cell">${d}</div>`).join('')}</div><div class="month-grid">`;
   const first=new Date(m.getFullYear(),m.getMonth(),1);
   let day=new Date(first);day.setDate(1-((first.getDay()+6)%7));
   for(let i=0;i<42;i++){
@@ -564,7 +591,10 @@ function renderMonth(title,body){
     const other=d.getMonth()!==m.getMonth(),today=isSameDay(d,state.today);
     const de=evs.filter(e=>e.date===ds);
     html+=`<div class="month-cell${other?' other-month':''}" onclick="cellClick('${ds}')">`;
-    html+=`<div class="month-day-num${today?' today':''}">${d.getDate()}</div>`;
+    const festivo=(isFestivo(d)||d.getDay()===6)&&!other;
+    const festivoTitle=getFestivo(d);
+    const numClass=today?' today':festivo?' festivo':'';
+    html+=`<div class="month-day-num${numClass}" title="${festivoTitle||''}">${d.getDate()}</div>`;
     de.slice(0,3).forEach(ev=>{
       html+=`<div class="event-chip" style="background:${getEventColor(ev)}" onclick="event.stopPropagation();editEvent('${ev.id}')" title="${ev.title}">${ev.title}</div>`;
     });
@@ -772,19 +802,42 @@ function closeEventModal(e){if(e&&e.target.id!=='event-modal')return;document.ge
 
 /* ── Reminder ── */
 function scheduleReminder(ev){
-  if(!('Notification' in window))return;
-  const go=()=>{
-    const evTime=new Date(ev.date+'T'+ev.time+':00');
-    const at=evTime.getTime()-(parseInt(ev.reminder||30)*60000);
-    if(at>Date.now())setTimeout(()=>new Notification('📅 Cal Famiglia',{body:ev.title,tag:ev.id}),at-Date.now());
-  };
-  if(Notification.permission==='granted')go();
-  else if(Notification.permission!=='denied')Notification.requestPermission().then(p=>{if(p==='granted')go()});
+  // Salva nel localStorage — il checker ogni minuto si occupa di sparare la notifica
+  if(ev.reminder==='none'||!ev.reminder||!ev.time||!ev.date)return;
+  const reminders=JSON.parse(localStorage.getItem(CAL_ID+'_reminders')||'{}');
+  const evTime=new Date(ev.date+'T'+ev.time+':00');
+  const at=evTime.getTime()-(parseInt(ev.reminder)*60000);
+  reminders[ev.id]={at,title:ev.title,fired:at<=Date.now()};
+  localStorage.setItem(CAL_ID+'_reminders',JSON.stringify(reminders));
 }
 function scheduleAllReminders(){
-  if(!('Notification' in window)||Notification.permission!=='granted')return;
   state.events.forEach(ev=>{if(ev.reminder&&ev.reminder!=='none')scheduleReminder(ev)});
 }
+function fireReminder(title){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){
+    new Notification('📅 Calendario Famiglia',{body:title,icon:'icon-192.png'});
+  } else {
+    // Fallback: toast visibile
+    showToast('🔔 Reminder: '+title);
+  }
+}
+function checkReminders(){
+  const reminders=JSON.parse(localStorage.getItem(CAL_ID+'_reminders')||'{}');
+  const now=Date.now();
+  let changed=false;
+  Object.entries(reminders).forEach(([id,r])=>{
+    if(!r.fired && r.at<=now && r.at>(now-120000)){ // finestra 2 min
+      fireReminder(r.title);
+      reminders[id].fired=true;
+      changed=true;
+    }
+  });
+  if(changed)localStorage.setItem(CAL_ID+'_reminders',JSON.stringify(reminders));
+}
+// Controlla ogni 30 secondi
+setInterval(checkReminders,30000);
+checkReminders(); // check immediato all'avvio
 
 /* ── Color picker ── */
 function buildColorPicker(cid,selected){
@@ -884,9 +937,14 @@ function toggleSidebar(){
 
 /* ── Notifiche ── */
 function requestNotifPermission(){
-  if(!('Notification' in window))return;
-  if(Notification.permission==='default')
-    Notification.requestPermission().then(p=>{if(p==='granted'){showToast('🔔 Notifiche attivate!');scheduleAllReminders()}});
+  if(!('Notification' in window)){showToast('⚠️ Notifiche non supportate su questo browser');return;}
+  if(Notification.permission==='granted'){scheduleAllReminders();return;}
+  if(Notification.permission==='default'){
+    Notification.requestPermission().then(p=>{
+      if(p==='granted'){showToast('🔔 Notifiche attivate!');scheduleAllReminders();}
+      else showToast('⚠️ Notifiche bloccate — abilita nelle impostazioni del browser');
+    });
+  }
 }
 
 /* ── Formattazione input orario ── */
