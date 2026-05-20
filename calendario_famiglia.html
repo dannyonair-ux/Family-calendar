@@ -9,6 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="Cal Famiglia">
 <meta name="theme-color" content="#f5f5f0">
 <title>Calendario Famiglia</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calendario Famiglia">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" defer></script>
 <style>
@@ -1065,6 +1070,16 @@ function init(){
 
 }
 init();
+</script>
+<script>
+// Registra service worker per PWA
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('SW registrato'))
+      .catch(e=>console.log('SW errore:',e));
+  });
+}
 </script>
 </body>
 </html>

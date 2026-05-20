@@ -1,5 +1,5 @@
-const CACHE = 'calfamiglia-v3';
-const FILES = ['./calendario_famiglia.html', './manifest.json'];
+const CACHE = 'calfamiglia-v4';
+const FILES = ['./calendario_famiglia.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -16,13 +16,14 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if(e.request.url.includes('firebasedatabase') || 
+  // Firebase e gstatic sempre dalla rete
+  if(e.request.url.includes('firebasedatabase') ||
      e.request.url.includes('firebaseio') ||
      e.request.url.includes('gstatic')) {
-    e.respondWith(fetch(e.request));
+    e.respondWith(fetch(e.request).catch(()=>new Response('')));
     return;
   }
-  // Network first: prova sempre la rete, fallback cache
+  // Network first, fallback cache
   e.respondWith(
     fetch(e.request)
       .then(r => {
@@ -32,4 +33,10 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request))
   );
+});
+
+// Gestione notifiche push (per future implementazioni)
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('./calendario_famiglia.html'));
 });
