@@ -14,8 +14,8 @@
 <meta name="apple-mobile-web-app-title" content="Calendario Famiglia">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:#222;font-size:15px}
@@ -395,7 +395,7 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
 
 <div class="toast" id="toast"></div>
 
-<script defer>
+<script>
 const COLORS={
   turchese:'#4dd9ac', blu:'#60a5fa', rosa:'#f472b6',
   arancio:'#fb923c', verde:'#4ade80', viola:'#a78bfa',
@@ -453,7 +453,7 @@ const FB_CONFIG={
 let fbDb=null;
 function initFirebase(){
   try{
-    if(typeof firebase==='undefined'){console.warn('Firebase non disponibile');return;}
+
     firebase.initializeApp(FB_CONFIG);
     fbDb=firebase.database();
     fbDb.ref('events').on('value',snap=>{
