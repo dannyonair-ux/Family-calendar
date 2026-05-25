@@ -361,6 +361,15 @@ body{font-family:system-ui,sans-serif;background:#f5f5f0;min-height:100vh;color:
       <strong>iPhone:</strong> Safari → icona condividi → "Aggiungi a schermata Home"<br>
       <strong>Android:</strong> Chrome → menu ⋮ → "Aggiungi alla schermata home"
     </div>
+    <div style="margin-top:10px;padding:12px;background:#f0f0ec;border-radius:9px">
+      <div class="sidebar-title" style="margin-bottom:5px">🔑 Crea gruppo separato</div>
+      <div style="font-size:12px;color:#666;margin-bottom:6px">Per un calendario per amici o altri gruppi, genera un link con un codice diverso:</div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="new-group-code" placeholder="Es. amici2025" style="flex:1;font-size:13px" />
+        <button class="btn-save" style="background:#666;font-size:12px;padding:7px 10px;white-space:nowrap" onclick="generateGroupLink()">Genera link</button>
+      </div>
+      <div id="group-link-result" style="margin-top:6px;font-size:11px;color:#444;word-break:break-all"></div>
+    </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeShareModal()">Chiudi</button>
     </div>
@@ -402,7 +411,7 @@ const COLORS={
   rosso:'#f87171', giallo:'#fbbf24', grigio:'#94a3b8', menta:'#34d399'
 };
 const FAM_COLOR='#f59e0b';
-const CAL_ID='famcal_2025';
+const CAL_ID=(()=>{const p=new URLSearchParams(location.search).get('g');return p?'famcal_'+p.replace(/[^a-z0-9]/gi,''):'famcal_2025';})();
 const MONTHS=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const DAYS=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
@@ -456,12 +465,12 @@ function initFirebase(){
 
     firebase.initializeApp(FB_CONFIG);
     fbDb=firebase.database();
-    fbDb.ref('events').on('value',snap=>{
+    fbDb.ref(CAL_ID+'/events').on('value',snap=>{
       const val=snap.val();
       state.events=val?Object.values(val):[];
       renderAll();
     });
-    fbDb.ref('members').on('value',snap=>{
+    fbDb.ref(CAL_ID+'/members').on('value',snap=>{
       const val=snap.val();
       if(val){state.members=Object.values(val);renderAll();}
     });
@@ -477,11 +486,19 @@ function loadData(){
 }
 function saveEvents(){
   localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events));
-  if(fbDb){const obj={};state.events.forEach(ev=>{obj[ev.id]=ev});fbDb.ref('events').set(obj).catch(()=>{});}
+  if(fbDb){const obj={};state.events.forEach(ev=>{obj[ev.id]=ev});fbDb.ref(CAL_ID+'/events').set(obj).catch(()=>{});}
+}
+function saveOneEvent(ev){
+  localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events));
+  if(fbDb) fbDb.ref(CAL_ID+'/events/'+ev.id).set(ev).catch(()=>{});
+}
+function deleteOneEvent(id){
+  localStorage.setItem(CAL_ID+'_events',JSON.stringify(state.events));
+  if(fbDb) fbDb.ref(CAL_ID+'/events/'+id).remove().catch(()=>{});
 }
 function saveMembers(){
   localStorage.setItem(CAL_ID+'_members',JSON.stringify(state.members));
-  if(fbDb){const obj={};state.members.forEach(m=>{obj[m.key]=m});fbDb.ref('members').set(obj).catch(()=>{});}
+  if(fbDb){const obj={};state.members.forEach(m=>{obj[m.key]=m});fbDb.ref(CAL_ID+'/members').set(obj).catch(()=>{});}
 }
 function saveProfileData(){
   localStorage.setItem(CAL_ID+'_profile_'+getUK(),JSON.stringify(state.profile));
@@ -792,16 +809,20 @@ function doSaveEvent(){
     const ev=state.events.find(e=>e.id===state.editId);
     if(ev&&ev.authorKey===state.profile.key)Object.assign(ev,{title,date,time,duration,category,notes,color,reminder});
   }else{
-    const newEv={id:Date.now().toString(36)+Math.random().toString(36).slice(2),title,date,time,duration,category,notes,color,reminder,authorKey:state.profile.key};
+    const newEv={id:Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+getUK().slice(0,4),title,date,time,duration,category,notes,color,reminder,authorKey:state.profile.key};
     state.events.push(newEv);
     if(reminder!=='none')scheduleReminder(newEv);
+    saveOneEvent(newEv);
+    closeEventModal();renderAll();showToast('Evento salvato ✓');
+    return;
   }
   saveEvents();closeEventModal();renderAll();showToast('Evento salvato ✓');
 }
 
 function doDeleteEvent(id){
   state.events=state.events.filter(e=>e.id!==id);
-  saveEvents();closeEventModal();renderAll();showToast('Evento eliminato');
+  deleteOneEvent(id);
+  closeEventModal();renderAll();showToast('Evento eliminato');
 }
 function closeEventModal(e){if(e&&e.target.id!=='event-modal')return;document.getElementById('event-modal').style.display='none'}
 
@@ -842,7 +863,8 @@ function checkReminders(){
 }
 // Controlla ogni 30 secondi
 setInterval(checkReminders,30000);
-checkReminders(); // check immediato all'avvio
+checkReminders();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkReminders();});
 
 /* ── Color picker ── */
 function buildColorPicker(cid,selected){
@@ -869,15 +891,19 @@ function buildMiniColorPicker(cid,selected){
 
 /* ── Condivisione ── */
 function openShare(){
-  document.getElementById('share-link-text').textContent=location.href.split('?')[0];
-  document.getElementById('share-members-list').innerHTML=state.members
-    .map(m=>`<div class="fam-legend"><div class="member-dot" style="background:${m.color}"></div><span>${m.name}${m.key===state.profile?.key?' (tu)':''}</span></div>`).join('');
+  const _base=location.href.split('?')[0];const _gs=CAL_ID!=='famcal_2025'?'?g='+CAL_ID.replace('famcal_',''):'';document.getElementById('share-link-text').textContent=_base+_gs;
+  document.getElementById('share-members-list').innerHTML=state.members.map(m=>`<div style='display:flex;align-items:center;justify-content:space-between;padding:5px 3px'><div style='display:flex;align-items:center;gap:7px'><div class='member-dot' style='background:${m.color}'></div><span style='font-size:14px'>${m.name}${m.key===state.profile?.key?' (tu)':''}</span></div>${m.key!==state.profile?.key?`<button onclick='removeMember("${m.key}")' style='background:none;border:none;cursor:pointer;color:#e24b4a;font-size:18px;padding:2px 6px'>&#128465;</button>`:''}</div>`).join('');
   const usedColors=state.members.map(m=>m.color);
   const free=Object.values(COLORS).find(c=>!usedColors.includes(c))||'#94a3b8';
   buildMiniColorPicker('new-member-color-picker',free);
   document.getElementById('share-modal').style.display='flex';
 }
 function closeShareModal(e){if(e&&e.target.id!=='share-modal')return;document.getElementById('share-modal').style.display='none'}
+function removeMember(key){
+  if(!confirm('Rimuovere questo membro?'))return;
+  state.members=state.members.filter(m=>m.key!==key);
+  saveMembers();openShare();renderAll();showToast('Membro rimosso');
+}
 function addMember(){
   const name=document.getElementById('new-member-name').value.trim();
   if(!name){showToast('Inserisci un nome!');return}
@@ -885,6 +911,13 @@ function addMember(){
   state.members.push({name,color,key:'guest_'+Date.now().toString(36)});
   saveMembers();document.getElementById('new-member-name').value='';
   openShare();renderAll();showToast(`${name} aggiunto!`);
+}
+function generateGroupLink(){
+  const code=document.getElementById('new-group-code').value.trim().replace(/[^a-z0-9]/gi,'');
+  if(!code){showToast('Inserisci un codice!');return;}
+  const link=location.href.split('?')[0]+'?g='+code;
+  document.getElementById('group-link-result').textContent='Link: '+link;
+  navigator.clipboard.writeText(link).then(()=>showToast('Link gruppo copiato!'));
 }
 function copyLink(){
   const txt=document.getElementById('share-link-text').textContent;
