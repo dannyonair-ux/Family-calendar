@@ -9,7 +9,32 @@
 <meta name="apple-mobile-web-app-title" content="Cal Famiglia">
 <meta name="theme-color" content="#f5f5f0">
 <title>Calendario Famiglia</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json" id="manifest-link">
+<script>
+// Se c'è un codice gruppo nell'URL, genera un manifest dinamico
+(function(){
+  const p=new URLSearchParams(location.search).get('g');
+  if(!p) return; // nessun gruppo, usa manifest normale
+  const manifestData={
+    name:"Calendario Famiglia",
+    short_name:"Calendario Famiglia",
+    description:"Calendario condiviso",
+    start_url:"./calendario_famiglia.html?g="+p,
+    scope:"./",
+    display:"standalone",
+    background_color:"#f5f5f0",
+    theme_color:"#4dd9ac",
+    orientation:"any",
+    icons:[
+      {src:"icon-192.png",sizes:"192x192",type:"image/png",purpose:"any"},
+      {src:"icon-512.png",sizes:"512x512",type:"image/png",purpose:"maskable"}
+    ]
+  };
+  const blob=new Blob([JSON.stringify(manifestData)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  document.getElementById('manifest-link').href=url;
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Calendario Famiglia">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
